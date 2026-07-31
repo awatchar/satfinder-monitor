@@ -37,7 +37,7 @@ TinyGS does not respond to a plain request to `/v3/stations`. Its web app adds a
 npm.cmd run tinygs:sync -- --yes
 ```
 
-The production worker runs from `.github/workflows/tinygs-sync.yml` every six hours in the `Asia/Bangkok` timezone. Its Google authorized-user credential is stored only in the encrypted repository secret `GOOGLE_AUTHORIZED_USER_JSON`. It does not use Chrome, browser cookies, or TinyGS login state.
+The production worker runs from `.github/workflows/tinygs-sync.yml` every six hours in the `Asia/Bangkok` timezone. Its Google authorized-user credential is stored only in the encrypted repository secret `GOOGLE_AUTHORIZED_USER_JSON`. An optional official TinyGS API token can be stored as `TINYGS_BEARER_TOKEN` when authenticated cloud access is required. It does not use Chrome, browser cookies, or TinyGS login state.
 
 Run the same worker locally when needed:
 

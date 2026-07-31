@@ -34,3 +34,4 @@ jobs:
         run: npm run tinygs:sync -- --yes
         env:
           GOOGLE_AUTHORIZED_USER_JSON: ${{ secrets.GOOGLE_AUTHORIZED_USER_JSON }}
+          TINYGS_BEARER_TOKEN: ${{ secrets.TINYGS_BEARER_TOKEN }}
