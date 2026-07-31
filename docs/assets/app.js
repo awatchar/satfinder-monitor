@@ -9,7 +9,7 @@
     projectSubtitle: document.querySelector('#projectSubtitle'),
     refreshButton: document.querySelector('#refreshButton'),
     stationSearch: document.querySelector('#stationSearch'),
-    statusFilters: document.querySelector('#statusFilters'),
+    regionFilters: document.querySelector('#regionFilters'),
     stationList: document.querySelector('#stationList'),
     resultCount: document.querySelector('#resultCount'),
     errorBanner: document.querySelector('#errorBanner'),
@@ -19,21 +19,20 @@
     selectedStatus: document.querySelector('#selectedStatus'),
     selectedName: document.querySelector('#selectedName'),
     selectedRegion: document.querySelector('#selectedRegion'),
-    selectedConfirmed: document.querySelector('#selectedConfirmed'),
-    selectedTelemetry: document.querySelector('#selectedTelemetry'),
-    selectedSeen: document.querySelector('#selectedSeen'),
+    selectedArea: document.querySelector('#selectedArea'),
+    selectedSatellite: document.querySelector('#selectedSatellite'),
+    selectedCoordinates: document.querySelector('#selectedCoordinates'),
     metricTotal: document.querySelector('#metricTotal'),
     metricLatest: document.querySelector('#metricLatest'),
-    metricOnline: document.querySelector('#metricOnline'),
-    metricOnlineRate: document.querySelector('#metricOnlineRate'),
-    metricFollowup: document.querySelector('#metricFollowup'),
+    metricTarget: document.querySelector('#metricTarget'),
+    metricProgress: document.querySelector('#metricProgress'),
+    metricRemaining: document.querySelector('#metricRemaining'),
     metricPackets: document.querySelector('#metricPackets'),
-    metricTelemetry: document.querySelector('#metricTelemetry'),
   };
 
   const state = {
     data: null,
-    activeFilter: 'all',
+    activeRegion: 'all',
     query: '',
     selectedKey: '',
     loading: false,
@@ -42,23 +41,14 @@
 
   const numberFormatter = new Intl.NumberFormat('th-TH');
   const percentFormatter = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 });
-  const relativeFormatter = new Intl.RelativeTimeFormat('th', { numeric: 'auto' });
   const dateFormatter = new Intl.DateTimeFormat('th-TH', {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Bangkok',
   });
 
-  const statusLabels = {
-    online: 'ออนไลน์',
-    recent: 'เพิ่งพบสัญญาณ',
-    followup: 'รอติดตาม',
-  };
-  const markerColors = {
-    online: '#5ff0ad',
-    recent: '#67d9f3',
-    followup: '#f2c14e',
-  };
+  const stationColor = '#5ff0ad';
+  const projectTarget = Math.max(1, Number(config.projectTargetStations) || 250);
 
   let map;
   let stationLayer;
@@ -69,16 +59,23 @@
     map = window.L.map('map', {
       zoomControl: false,
       preferCanvas: true,
-      minZoom: 2,
+      minZoom: 4,
+      maxBounds: [[3.5, 94], [23, 110]],
+      maxBoundsViscosity: 0.8,
       worldCopyJump: true,
+      fadeAnimation: false,
+      zoomAnimation: false,
+      markerZoomAnimation: false,
     }).setView(config.defaultCenter || [13.7563, 100.5018], config.defaultZoom || 5);
     window.L.control.zoom({ position: 'bottomleft' }).addTo(map);
-    window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    window.L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       maxZoom: 19,
-      subdomains: 'abcd',
+      keepBuffer: 4,
+      updateWhenIdle: true,
     }).addTo(map);
     stationLayer = window.L.layerGroup().addTo(map);
+    window.setTimeout(() => map.invalidateSize(false), 0);
   }
 
   function loadJsonp(url, timeoutMs = 25_000) {
@@ -114,18 +111,6 @@
     return numberFormatter.format(Number(value) || 0);
   }
 
-  function formatRelative(minutes) {
-    const numeric = Number(minutes);
-    if (!Number.isFinite(numeric)) return 'ไม่พบเวลา';
-    if (numeric < 60) return relativeFormatter.format(-Math.max(0, Math.round(numeric)), 'minute');
-    if (numeric < 1440) return relativeFormatter.format(-Math.round(numeric / 60), 'hour');
-    return relativeFormatter.format(-Math.round(numeric / 1440), 'day');
-  }
-
-  function statusLabel(stateName) {
-    return statusLabels[stateName] || 'ไม่ระบุสถานะ';
-  }
-
   function normalizedSearch(value) {
     return String(value || '').trim().toLocaleLowerCase('th');
   }
@@ -133,7 +118,7 @@
   function filteredStations() {
     if (!state.data) return [];
     return state.data.stations.filter((station) => {
-      if (state.activeFilter !== 'all' && station.monitorState !== state.activeFilter) return false;
+      if (state.activeRegion !== 'all' && station.region !== state.activeRegion) return false;
       if (!state.query) return true;
       const haystack = [station.name, station.satellite, station.satDisplayName, station.region, station.version]
         .map(normalizedSearch)
@@ -152,7 +137,7 @@
   function popupContent(station) {
     const wrapper = document.createElement('div');
     wrapper.append(
-      createText('div', 'popup-status', statusLabel(station.monitorState)),
+      createText('div', 'popup-status', 'สถานีในโครงการ'),
       createText('div', 'popup-name', station.name),
       createText('div', 'popup-meta', `${station.region || 'ไม่ระบุพื้นที่'} · ${station.satellite || 'ไม่ระบุดาวเทียม'}`),
     );
@@ -167,13 +152,12 @@
       const latitude = Number(station.latitude);
       const longitude = Number(station.longitude);
       if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
-      const color = markerColors[station.monitorState] || '#91a99f';
       const marker = window.L.circleMarker([latitude, longitude], {
-        radius: station.monitorState === 'online' ? 7 : 5.5,
+        radius: 6,
         weight: 1.5,
-        color,
-        fillColor: color,
-        fillOpacity: station.monitorState === 'online' ? 0.88 : 0.68,
+        color: stationColor,
+        fillColor: stationColor,
+        fillOpacity: 0.86,
       });
       marker.bindPopup(popupContent(station), { className: 'station-popup', closeButton: false });
       marker.on('click', () => selectStation(station.stationKey, false));
@@ -182,7 +166,8 @@
       bounds.push([latitude, longitude]);
     }
     if (bounds.length && !state.selectedKey) {
-      map.fitBounds(bounds, { padding: [28, 28], maxZoom: 8 });
+      map.invalidateSize(false);
+      map.fitBounds(bounds, { padding: [32, 32], maxZoom: 8, animate: false });
     }
   }
 
@@ -191,8 +176,7 @@
     button.type = 'button';
     button.className = `station-item${state.selectedKey === station.stationKey ? ' is-selected' : ''}`;
     button.dataset.key = station.stationKey;
-    button.dataset.state = station.monitorState;
-    button.setAttribute('aria-label', `${station.name}, ${statusLabel(station.monitorState)}`);
+    button.setAttribute('aria-label', `${station.name}, ${station.region || 'ไม่ระบุพื้นที่'}`);
     button.addEventListener('click', () => selectStation(station.stationKey, true));
 
     const signal = createText('span', 'station-signal', '');
@@ -200,14 +184,9 @@
     const copy = createText('span', 'station-copy', '');
     copy.append(
       createText('strong', '', station.name),
-      createText('span', '', `${station.region || 'ไม่ระบุพื้นที่'} · ${station.satellite || 'ไม่ระบุดาวเทียม'} · ${formatRelative(station.minutesSinceSeen)}`),
+      createText('span', '', `${station.region || 'ไม่ระบุพื้นที่'} · ${station.satellite || 'ไม่ระบุดาวเทียม'}`),
     );
-    const packets = createText('span', 'station-packets', '');
-    packets.append(
-      createText('strong', '', formatNumber(station.confirmedPackets)),
-      createText('small', '', 'confirmed'),
-    );
-    button.append(signal, copy, packets);
+    button.append(signal, copy);
     return button;
   }
 
@@ -226,14 +205,16 @@
 
   function renderMetrics(summary) {
     const total = Number(summary.totalStations) || 0;
-    const online = Number(summary.onlineStations) || 0;
+    const progress = Math.min(100, total / projectTarget * 100);
+    const remaining = Math.max(0, projectTarget - total);
     elements.metricTotal.textContent = formatNumber(total);
-    elements.metricLatest.textContent = `${formatNumber(summary.latestStations)} สถานีในข้อมูลรอบล่าสุด`;
-    elements.metricOnline.textContent = formatNumber(online);
-    elements.metricOnlineRate.textContent = `${percentFormatter.format(total ? online / total * 100 : 0)}% ของเครือข่าย`;
-    elements.metricFollowup.textContent = formatNumber(summary.followUpStations);
+    elements.metricLatest.textContent = `ครอบคลุม ${formatNumber(summary.withLocation || total)} จุดบนแผนที่`;
+    elements.metricTarget.textContent = formatNumber(projectTarget);
+    elements.metricProgress.textContent = `${percentFormatter.format(progress)}%`;
+    elements.metricRemaining.textContent = remaining
+      ? `อีก ${formatNumber(remaining)} สถานี สู่เป้าหมาย`
+      : 'บรรลุเป้าหมายโครงการแล้ว';
     elements.metricPackets.textContent = formatNumber(summary.confirmedPackets);
-    elements.metricTelemetry.textContent = `${formatNumber(summary.telemetryPackets)} telemetry`;
   }
 
   function renderFilters() {
@@ -251,18 +232,22 @@
     const station = selectedStation();
     if (!station) return closeSelection();
     elements.selectionCard.hidden = false;
-    elements.selectedStatus.textContent = statusLabel(station.monitorState);
+    elements.selectedStatus.textContent = 'สถานีในโครงการ';
     elements.selectedName.textContent = station.name;
     elements.selectedRegion.textContent = `${station.region || 'ไม่ระบุพื้นที่'} · ${station.satellite || 'ไม่ระบุดาวเทียม'}`;
-    elements.selectedConfirmed.textContent = formatNumber(station.confirmedPackets);
-    elements.selectedTelemetry.textContent = formatNumber(station.telemetryPackets);
-    elements.selectedSeen.textContent = formatRelative(station.minutesSinceSeen);
+    elements.selectedArea.textContent = station.region || 'ไม่ระบุพื้นที่';
+    elements.selectedSatellite.textContent = station.satellite || 'ไม่ระบุดาวเทียม';
+    const latitude = Number(station.latitude);
+    const longitude = Number(station.longitude);
+    elements.selectedCoordinates.textContent = Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`
+      : 'ไม่ระบุพิกัด';
     document.querySelectorAll('.station-item').forEach((item) => {
       item.classList.toggle('is-selected', item.dataset.key === stationKey);
     });
     const marker = markersByKey.get(stationKey);
     if (marker) {
-      if (moveMap) map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 8), { duration: 0.6 });
+      if (moveMap) map.setView(marker.getLatLng(), Math.max(map.getZoom(), 8), { animate: false });
       marker.openPopup();
     }
   }
@@ -308,8 +293,7 @@
       state.data = payload.data;
       renderMetrics(payload.data.summary || {});
       renderFilters();
-      const project = payload.data.project || {};
-      elements.projectSubtitle.textContent = `${project.operatorName || 'SatFinder'} · ${project.countryFocus || 'Thailand'}`;
+      elements.projectSubtitle.textContent = 'โครงการส่งเสริมการเรียนรู้ทางด้านโทรคมนาคมในโรงเรียนทั่วประเทศ';
       const importDate = payload.data.config?.lastImportAt ? new Date(payload.data.config.lastImportAt) : null;
       showLive(importDate && !Number.isNaN(importDate.getTime()) ? importDate : null);
     } catch (error) {
@@ -331,11 +315,11 @@
     closeSelection();
     renderFilters();
   });
-  elements.statusFilters.addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-filter]');
+  elements.regionFilters.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-region]');
     if (!button) return;
-    state.activeFilter = button.dataset.filter;
-    elements.statusFilters.querySelectorAll('button').forEach((item) => {
+    state.activeRegion = button.dataset.region;
+    elements.regionFilters.querySelectorAll('button').forEach((item) => {
       item.setAttribute('aria-pressed', String(item === button));
     });
     closeSelection();
