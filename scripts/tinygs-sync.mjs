@@ -53,27 +53,44 @@ function createTinyGsClientTimestamp(timestampMs = Date.now()) {
 }
 
 async function fetchTinyGsStations(url) {
-  const response = await fetch(url, {
-    headers: {
+  let lastError;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const headers = {
       accept: 'application/json',
+      'cache-control': 'no-cache',
+      origin: 'https://app.tinygs.com',
+      referer: 'https://app.tinygs.com/',
+      'user-agent': 'Mozilla/5.0 SatFinder-Monitor/1.0',
       'x-client-timestamp': createTinyGsClientTimestamp(),
-    },
-    signal: AbortSignal.timeout(45_000),
-  });
+    };
+    const bearerToken = String(process.env.TINYGS_BEARER_TOKEN || '').trim();
+    if (bearerToken) headers.authorization = `Bearer ${bearerToken}`;
 
-  if (!response.ok) {
-    throw new Error(`TinyGS API returned HTTP ${response.status}.`);
-  }
-  const contentLength = Number(response.headers.get('content-length') || 0);
-  if (contentLength > 5_000_000) {
-    throw new Error(`TinyGS response is unexpectedly large (${contentLength} bytes).`);
-  }
+    try {
+      const response = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(30_000),
+      });
 
-  const data = await response.json();
-  if (!Array.isArray(data) || data.length < 100) {
-    throw new Error('TinyGS response did not contain the expected station array.');
+      if (!response.ok) {
+        throw new Error(`TinyGS API returned HTTP ${response.status}.`);
+      }
+      const contentLength = Number(response.headers.get('content-length') || 0);
+      if (contentLength > 5_000_000) {
+        throw new Error(`TinyGS response is unexpectedly large (${contentLength} bytes).`);
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length < 100) {
+        throw new Error('TinyGS response did not contain the expected station array.');
+      }
+      return data;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 2_000));
+    }
   }
-  return data;
+  throw lastError;
 }
 
 function configMap(values) {
