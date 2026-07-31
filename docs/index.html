@@ -4,17 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07110f">
-  <meta name="description" content="SatFinder ground-station operations monitor">
+  <meta name="description" content="SatFinder Monitor — เครือข่ายสถานีภาคพื้นดินเพื่อส่งเสริมการเรียนรู้ด้านโทรคมนาคมในโรงเรียนทั่วประเทศ">
   <title>SatFinder Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIINfQ3ynJb+Fj/VOjsAK10iZ7V9uHEVZc0="
-    crossorigin=""
-  >
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -42,10 +36,10 @@
     <main id="monitor-main">
       <section class="hero" aria-labelledby="pageTitle">
         <div>
-          <p class="eyebrow">THAILAND · TINYGS NETWORK</p>
+          <p class="eyebrow">250 SCHOOLS · NATIONWIDE</p>
           <h1 id="pageTitle">SatFinder Monitor</h1>
           <p class="hero-copy" id="projectSubtitle">
-            ภาพรวมสถานีภาคพื้นดินและสถานะการรับสัญญาณแบบเรียลไทม์
+            โครงการส่งเสริมการเรียนรู้ทางด้านโทรคมนาคมในโรงเรียนทั่วประเทศ
           </p>
         </div>
         <button class="refresh-button" id="refreshButton" type="button">
@@ -58,41 +52,44 @@
 
       <section class="metrics" aria-label="Network summary">
         <article class="metric-card metric-primary">
-          <span>สถานีทั้งหมด</span>
+          <span>สถานีในโครงการ</span>
           <strong id="metricTotal">—</strong>
-          <small id="metricLatest">รอข้อมูลล่าสุด</small>
+          <small id="metricLatest">จากฐานข้อมูล SatFinder</small>
         </article>
-        <article class="metric-card metric-online">
-          <span>ออนไลน์</span>
-          <strong id="metricOnline">—</strong>
-          <small id="metricOnlineRate">—</small>
+        <article class="metric-card metric-target">
+          <span>เป้าหมายโครงการ</span>
+          <strong id="metricTarget">250</strong>
+          <small>สถานีทั่วประเทศ</small>
         </article>
-        <article class="metric-card metric-followup">
-          <span>รอติดตาม</span>
-          <strong id="metricFollowup">—</strong>
-          <small>สถานีที่ควรตรวจสอบ</small>
+        <article class="metric-card metric-progress">
+          <span>ความคืบหน้า</span>
+          <strong id="metricProgress">—</strong>
+          <small id="metricRemaining">สู่เป้าหมาย 250 สถานี</small>
         </article>
         <article class="metric-card metric-packets">
           <span>Confirmed packets</span>
           <strong id="metricPackets">—</strong>
-          <small id="metricTelemetry">— telemetry</small>
+          <small>ยอดรวมของทุกสถานี</small>
         </article>
       </section>
 
-      <section class="control-deck" aria-label="Station filters">
+      <section class="control-deck" aria-label="ค้นหาและกรองสถานี">
         <label class="search-box" for="stationSearch">
           <svg aria-hidden="true" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="7"></circle>
             <path d="m20 20-3.4-3.4"></path>
           </svg>
-          <input id="stationSearch" type="search" placeholder="ค้นหาสถานี ดาวเทียม พื้นที่ หรือเวอร์ชัน">
+          <input id="stationSearch" type="search" placeholder="ค้นหาชื่อสถานี ดาวเทียม หรือพื้นที่">
         </label>
 
-        <div class="status-filters" id="statusFilters" aria-label="กรองตามสถานะ">
-          <button type="button" data-filter="all" aria-pressed="true">ทั้งหมด</button>
-          <button type="button" data-filter="online" aria-pressed="false"><span class="filter-dot dot-online"></span>ออนไลน์</button>
-          <button type="button" data-filter="recent" aria-pressed="false"><span class="filter-dot dot-recent"></span>เพิ่งพบ</button>
-          <button type="button" data-filter="followup" aria-pressed="false"><span class="filter-dot dot-followup"></span>รอติดตาม</button>
+        <div class="region-filters" id="regionFilters" aria-label="กรองตามภูมิภาค">
+          <button type="button" data-region="all" aria-pressed="true">ทั่วประเทศ</button>
+          <button type="button" data-region="ภาคเหนือ" aria-pressed="false">ภาคเหนือ</button>
+          <button type="button" data-region="ภาคกลาง" aria-pressed="false">ภาคกลาง</button>
+          <button type="button" data-region="ภาคตะวันออกเฉียงเหนือ" aria-pressed="false">ภาคอีสาน</button>
+          <button type="button" data-region="ภาคตะวันออก" aria-pressed="false">ภาคตะวันออก</button>
+          <button type="button" data-region="ภาคตะวันตก" aria-pressed="false">ภาคตะวันตก</button>
+          <button type="button" data-region="ภาคใต้" aria-pressed="false">ภาคใต้</button>
         </div>
       </section>
 
@@ -103,23 +100,21 @@
               <p class="panel-kicker">NETWORK MAP</p>
               <h2>ตำแหน่งสถานีภาคพื้นดิน</h2>
             </div>
-            <div class="map-legend" aria-label="Map legend">
-              <span><i class="dot-online"></i>ออนไลน์</span>
-              <span><i class="dot-recent"></i>เพิ่งพบ</span>
-              <span><i class="dot-followup"></i>รอติดตาม</span>
+            <div class="map-legend" aria-label="คำอธิบายแผนที่">
+              <span><i class="dot-station"></i>สถานีในโครงการ</span>
             </div>
           </header>
           <div class="map-stage">
             <div id="map" role="application" aria-label="แผนที่สถานี SatFinder"></div>
             <aside class="selection-card" id="selectionCard" hidden aria-live="polite">
               <button id="closeSelection" type="button" aria-label="ปิดรายละเอียดสถานี">×</button>
-              <p id="selectedStatus">—</p>
+              <p id="selectedStatus">สถานีในโครงการ</p>
               <h3 id="selectedName">—</h3>
               <span id="selectedRegion">—</span>
               <dl>
-                <div><dt>Confirmed</dt><dd id="selectedConfirmed">—</dd></div>
-                <div><dt>Telemetry</dt><dd id="selectedTelemetry">—</dd></div>
-                <div><dt>พบล่าสุด</dt><dd id="selectedSeen">—</dd></div>
+                <div><dt>ภูมิภาค</dt><dd id="selectedArea">—</dd></div>
+                <div><dt>ดาวเทียม</dt><dd id="selectedSatellite">—</dd></div>
+                <div><dt>พิกัด</dt><dd id="selectedCoordinates">—</dd></div>
               </dl>
             </aside>
           </div>
