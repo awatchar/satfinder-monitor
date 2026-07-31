@@ -49,6 +49,8 @@
 
   const stationColor = '#5ff0ad';
   const projectTarget = Math.max(1, Number(config.projectTargetStations) || 250);
+  const snapshotUrl = String(config.dataUrl || 'data/stations.json');
+  const cacheKey = 'satfinder-public-snapshot-v2';
 
   let map;
   let stationLayer;
@@ -78,33 +80,46 @@
     window.setTimeout(() => map.invalidateSize(false), 0);
   }
 
-  function loadJsonp(url, timeoutMs = 25_000) {
-    return new Promise((resolve, reject) => {
-      const callback = `__satfinder_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const script = document.createElement('script');
-      const separator = url.includes('?') ? '&' : '?';
-      const cleanup = () => {
-        clearTimeout(timer);
-        script.remove();
-        delete window[callback];
-      };
-      const timer = window.setTimeout(() => {
-        cleanup();
-        reject(new Error('หมดเวลารอข้อมูลจาก Google Sheets'));
-      }, timeoutMs);
+  function isValidPayload(payload) {
+    return Boolean(payload?.ok && payload?.data && Array.isArray(payload.data.stations));
+  }
 
-      window[callback] = (payload) => {
-        cleanup();
-        resolve(payload);
-      };
-      script.onerror = () => {
-        cleanup();
-        reject(new Error('เชื่อมต่อ Apps Script endpoint ไม่สำเร็จ'));
-      };
-      script.src = `${url}${separator}callback=${encodeURIComponent(callback)}&_=${Date.now()}`;
-      script.async = true;
-      document.head.append(script);
-    });
+  function readCachedPayload() {
+    try {
+      const payload = JSON.parse(window.localStorage.getItem(cacheKey) || 'null');
+      return isValidPayload(payload) ? payload : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function cachePayload(payload) {
+    try {
+      window.localStorage.setItem(cacheKey, JSON.stringify(payload));
+    } catch {
+      // Private browsing and strict storage policies can disable localStorage.
+    }
+  }
+
+  async function loadSnapshot(timeoutMs = 8_000) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(snapshotUrl, {
+        cache: 'no-cache',
+        credentials: 'omit',
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${response.status})`);
+      const payload = await response.json();
+      if (!isValidPayload(payload)) throw new Error('รูปแบบข้อมูลสถานีไม่ถูกต้อง');
+      return payload;
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('หมดเวลารอข้อมูลสถานี');
+      throw error;
+    } finally {
+      window.clearTimeout(timer);
+    }
   }
 
   function formatNumber(value) {
@@ -145,6 +160,7 @@
   }
 
   function renderMap(stations) {
+    if (!map || !stationLayer) return;
     stationLayer.clearLayers();
     markersByKey.clear();
     const bounds = [];
@@ -255,12 +271,12 @@
   function closeSelection() {
     state.selectedKey = '';
     elements.selectionCard.hidden = true;
-    map.closePopup();
+    if (map) map.closePopup();
     document.querySelectorAll('.station-item.is-selected').forEach((item) => item.classList.remove('is-selected'));
   }
 
   function showError(error) {
-    elements.networkState.classList.remove('is-live');
+    elements.networkState.classList.remove('is-live', 'is-cached');
     elements.networkState.classList.add('is-error');
     elements.networkStateText.textContent = 'การเชื่อมต่อมีปัญหา';
     elements.errorMessage.textContent = error.message || 'โปรดลองใหม่อีกครั้ง';
@@ -268,37 +284,56 @@
   }
 
   function showLive(importDate) {
-    elements.networkState.classList.remove('is-error');
+    elements.networkState.classList.remove('is-error', 'is-cached');
     elements.networkState.classList.add('is-live');
-    elements.networkStateText.textContent = 'เชื่อมต่อ Google Sheets แล้ว';
+    elements.networkStateText.textContent = 'ข้อมูลพร้อมใช้งาน';
     elements.lastUpdated.dateTime = importDate?.toISOString() || '';
     elements.lastUpdated.textContent = importDate ? `ข้อมูล ${dateFormatter.format(importDate)}` : '';
     elements.errorBanner.hidden = true;
   }
 
+  function showCached(importDate) {
+    elements.networkState.classList.remove('is-live', 'is-error');
+    elements.networkState.classList.add('is-cached');
+    elements.networkStateText.textContent = 'แสดงข้อมูลสำรองล่าสุด';
+    elements.lastUpdated.dateTime = importDate?.toISOString() || '';
+    elements.lastUpdated.textContent = importDate ? `ข้อมูล ${dateFormatter.format(importDate)}` : '';
+    elements.errorBanner.hidden = true;
+  }
+
+  function payloadImportDate(payload) {
+    const value = payload?.data?.config?.lastImportAt;
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function applyPayload(payload) {
+    state.data = payload.data;
+    renderMetrics(payload.data.summary || {});
+    renderFilters();
+    elements.projectSubtitle.textContent = 'โครงการส่งเสริมการเรียนรู้ทางด้านโทรคมนาคมในโรงเรียนทั่วประเทศ';
+  }
+
   async function refreshData() {
-    if (state.loading || !config.apiUrl) return;
+    if (state.loading) return;
     state.loading = true;
     state.requestId += 1;
     const requestId = state.requestId;
     elements.refreshButton.disabled = true;
     elements.refreshButton.classList.add('is-loading');
-    elements.networkStateText.textContent = 'กำลังอัปเดตข้อมูล';
+    if (!state.data) elements.networkStateText.textContent = 'กำลังโหลดข้อมูลสถานี';
     try {
-      const payload = await loadJsonp(config.apiUrl);
+      const payload = await loadSnapshot();
       if (requestId !== state.requestId) return;
-      if (!payload?.ok || !payload?.data || !Array.isArray(payload.data.stations)) {
-        throw new Error('รูปแบบข้อมูลจาก Apps Script ไม่ถูกต้อง');
-      }
-      state.data = payload.data;
-      renderMetrics(payload.data.summary || {});
-      renderFilters();
-      elements.projectSubtitle.textContent = 'โครงการส่งเสริมการเรียนรู้ทางด้านโทรคมนาคมในโรงเรียนทั่วประเทศ';
-      const importDate = payload.data.config?.lastImportAt ? new Date(payload.data.config.lastImportAt) : null;
-      showLive(importDate && !Number.isNaN(importDate.getTime()) ? importDate : null);
+      applyPayload(payload);
+      cachePayload(payload);
+      showLive(payloadImportDate(payload));
     } catch (error) {
-      showError(error);
-      if (!state.data) {
+      if (state.data) {
+        showCached(payloadImportDate({ data: state.data }));
+      } else {
+        showError(error);
         elements.stationList.replaceChildren(createText('div', 'empty-state', 'ยังไม่มีข้อมูลสถานีให้แสดง'));
       }
     } finally {
@@ -328,9 +363,17 @@
 
   try {
     initializeMap();
-    refreshData();
-    window.setInterval(refreshData, Math.max(30_000, Number(config.refreshIntervalMs) || 60_000));
   } catch (error) {
-    showError(error);
+    const mapElement = document.querySelector('#map');
+    mapElement.classList.add('map-unavailable');
+    mapElement.replaceChildren(createText('p', '', 'แผนที่ไม่พร้อมใช้งานชั่วคราว แต่ข้อมูลสถานียังแสดงได้ตามปกติ'));
   }
+
+  const cachedPayload = readCachedPayload();
+  if (cachedPayload) {
+    applyPayload(cachedPayload);
+    showCached(payloadImportDate(cachedPayload));
+  }
+  refreshData();
+  window.setInterval(refreshData, Math.max(30_000, Number(config.refreshIntervalMs) || 900_000));
 })();

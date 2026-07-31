@@ -70,4 +70,4 @@ npm.cmd run script:push -- --yes
 
 The local `main` branch tracks `https://github.com/awatchar/satfinder-monitor.git`. GitHub API access is available through the connected GitHub integration; local Git credentials are never stored in this repository.
 
-The modern static monitor is under `docs/` and is deployed by `.github/workflows/pages.yml`. It reads only the public Apps Script JSONP endpoint; TinyGS and Google OAuth credentials are never sent to the browser.
+The modern static monitor is under `docs/` and is deployed by `.github/workflows/pages.yml`. The deployment refreshes a compact, read-only Google Sheets snapshot every six hours. Browsers load that same-origin snapshot immediately and keep a local fallback copy, so a temporary Apps Script delay does not leave the dashboard empty. TinyGS and Google OAuth credentials are never sent to the browser.

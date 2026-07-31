@@ -173,6 +173,11 @@ a:focus-visible {
   box-shadow: 0 0 0 5px rgba(255, 125, 112, 0.12);
 }
 
+.network-state.is-cached .network-pulse {
+  background: var(--cyan);
+  box-shadow: 0 0 0 5px var(--cyan-soft);
+}
+
 @keyframes network-pulse {
   0%, 55% { box-shadow: 0 0 0 4px var(--mint-soft); }
   100% { box-shadow: 0 0 0 12px rgba(95, 240, 173, 0); }
@@ -455,6 +460,19 @@ h1 {
   height: 620px;
   overflow: hidden;
   background: #0b1513;
+}
+
+#map.map-unavailable {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+#map.map-unavailable p {
+  max-width: 360px;
+  margin: 0;
 }
 
 /* Leaflet's critical layout rules live here so the map remains usable even when
