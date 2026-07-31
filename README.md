@@ -6,14 +6,6 @@ This repository connects three managed resources without requiring ongoing brows
 - Bound Google Apps Script project: `SatFinder Worldmonitor`
 - GitHub repository: `awatchar/satfinder-monitor`
 
-## Resource IDs
-
-The non-secret IDs are stored in `project.config.json` and `.clasp.json`:
-
-- Spreadsheet ID: `1ncHxjFiwEMoGg0g00f7YEP23tcd1NO-NLomFh7ELGFs`
-- Apps Script ID: `1W6gbtwveKfu3yNXs_RKVYNuS6C33fimiRasrf-be-PfyIVxVOchhluRV`
-- Google Cloud project ID: `satfinder-monitor-api`
-
 ## One-time Google setup
 
 1. Enable the Google Apps Script API in Apps Script user settings.
