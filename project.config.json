@@ -1,0 +1,11 @@
+{
+  "googleCloudProjectId": "satfinder-monitor-api",
+  "spreadsheetId": "1ncHxjFiwEMoGg0g00f7YEP23tcd1NO-NLomFh7ELGFs",
+  "scriptId": "1W6gbtwveKfu3yNXs_RKVYNuS6C33fimiRasrf-be-PfyIVxVOchhluRV",
+  "webAppDeploymentId": "AKfycbxvDRAowoWoOZjN4Zx5Gj0gyM9gibOYDxfzca_xd1Dd5TwOigM5VlUMBuA2CUpCG-g0Bg",
+  "webAppUrl": "https://script.google.com/macros/s/AKfycbxvDRAowoWoOZjN4Zx5Gj0gyM9gibOYDxfzca_xd1Dd5TwOigM5VlUMBuA2CUpCG-g0Bg/exec",
+  "defaultReadRange": "Project_Summary!A1:B20",
+  "oauthCredentialsPath": ".secrets/oauth-client.json",
+  "oauthTokenPath": ".secrets/google-token.json",
+  "appsScriptSourceDir": "apps-script"
+}

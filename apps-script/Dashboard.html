@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090b0a;
+      --panel: #111514;
+      --panel-strong: #151b18;
+      --panel-soft: #0d1110;
+      --line: #25312d;
+      --line-soft: #1b2421;
+      --text: #f4fbf7;
+      --muted: #a7b9b1;
+      --subtle: #708178;
+      --green: #30e08a;
+      --green-soft: rgba(48, 224, 138, 0.14);
+      --cyan: #55d9ff;
+      --cyan-soft: rgba(85, 217, 255, 0.13);
+      --amber: #f4c84a;
+      --amber-soft: rgba(244, 200, 74, 0.15);
+      --red: #ff6d61;
+      --red-soft: rgba(255, 109, 97, 0.14);
+      --violet: #ba8cff;
+      --violet-soft: rgba(186, 140, 255, 0.14);
+      --white-soft: rgba(255, 255, 255, 0.07);
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        linear-gradient(180deg, rgba(25, 34, 30, 0.95), rgba(9, 11, 10, 1) 36%),
+        var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans Thai", sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app-shell {
+      width: min(1760px, 100%);
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      margin-top: 3px;
+      font-size: clamp(25px, 3vw, 42px);
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .subtitle {
+      max-width: 980px;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill,
+    .action-button,
+    .segmented button,
+    .pager button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .status-pill {
+      min-width: 170px;
+      padding: 9px 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .action-button {
+      padding: 9px 14px;
+      font-weight: 700;
+    }
+
+    .action-button:hover,
+    .segmented button:hover,
+    .pager button:hover {
+      border-color: var(--cyan);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .kpi {
+      min-height: 116px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel-soft));
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .kpi span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .kpi strong {
+      display: block;
+      margin-top: 11px;
+      color: var(--text);
+      font-size: 27px;
+      line-height: 1.05;
+      letter-spacing: 0;
+      word-break: break-word;
+    }
+
+    .kpi small {
+      display: block;
+      margin-top: 10px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .kpi.online strong {
+      color: var(--green);
+    }
+
+    .kpi.follow strong {
+      color: var(--amber);
+    }
+
+    .kpi.packet strong {
+      color: var(--cyan);
+    }
+
+    .monitor-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(360px, 0.95fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(17, 21, 20, 0.96);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .panel-meta {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    #map {
+      width: 100%;
+      height: 590px;
+      background: #18211d;
+    }
+
+    .leaflet-container {
+      background: #18211d;
+      color: #17201c;
+      font-family: Arial, "Noto Sans Thai", sans-serif;
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: #101513;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .popup-title {
+      font-weight: 760;
+      margin-bottom: 4px;
+    }
+
+    .popup-grid {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 3px 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .ops-body {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .interpretation {
+      border: 1px solid rgba(244, 200, 74, 0.32);
+      border-radius: 8px;
+      background: var(--amber-soft);
+      color: #ffe8a0;
+      padding: 11px 12px;
+      font-size: 12px;
+    }
+
+    .region-overview {
+      display: grid;
+      gap: 12px;
+      border-top: 1px solid var(--line-soft);
+      padding-top: 12px;
+    }
+
+    .region-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .region-head span {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .region-card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .region-card {
+      min-height: 118px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #121815, #0d1110);
+      padding: 13px;
+    }
+
+    .region-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .region-card strong {
+      display: block;
+      margin-top: 10px;
+      color: var(--cyan);
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .region-card small {
+      display: block;
+      margin-top: 8px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .region-meter {
+      height: 7px;
+      margin-top: 11px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--white-soft);
+    }
+
+    .region-meter-fill {
+      height: 100%;
+      min-width: 4px;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green), var(--cyan));
+    }
+
+    .station-panel {
+      margin-top: 12px;
+    }
+
+    .station-toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .search {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #090d0c;
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--cyan);
+    }
+
+    .segmented {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .segmented button,
+    .pager button {
+      min-height: 40px;
+      padding: 0 11px;
+      color: var(--muted);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .segmented button.active {
+      background: var(--green-soft);
+      border-color: rgba(48, 224, 138, 0.65);
+      color: var(--green);
+    }
+
+    .page-size {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #090d0c;
+      color: var(--text);
+      padding: 0 10px;
+    }
+
+    .station-list {
+      display: grid;
+      gap: 1px;
+      max-height: 560px;
+      overflow: auto;
+      background: var(--line-soft);
+    }
+
+    .station-row {
+      display: grid;
+      grid-template-columns: minmax(240px, 1.2fr) repeat(3, minmax(112px, 0.45fr));
+      gap: 10px;
+      width: 100%;
+      min-height: 76px;
+      border: 0;
+      border-left: 4px solid transparent;
+      border-radius: 0;
+      background: #101513;
+      color: var(--text);
+      padding: 11px 12px;
+      text-align: left;
+      align-items: center;
+    }
+
+    .station-row:hover,
+    .station-row.selected {
+      background: #151d19;
+    }
+
+    .station-row.selected {
+      outline: 1px solid rgba(85, 217, 255, 0.52);
+      outline-offset: -1px;
+    }
+
+    .station-row.state-online {
+      border-left-color: var(--green);
+    }
+
+    .station-row.state-recent {
+      border-left-color: var(--cyan);
+    }
+
+    .station-row.state-followup {
+      border-left-color: var(--amber);
+    }
+
+    .station-main {
+      min-width: 0;
+    }
+
+    .station-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 760;
+    }
+
+    .station-name span:last-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: var(--subtle);
+    }
+
+    .state-online .dot {
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(48, 224, 138, 0.8);
+    }
+
+    .state-recent .dot {
+      background: var(--cyan);
+    }
+
+    .state-followup .dot {
+      background: var(--amber);
+    }
+
+    .station-sub {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .metric-cell {
+      min-width: 0;
+    }
+
+    .metric-cell span {
+      display: block;
+      color: var(--subtle);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .metric-cell strong {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      color: var(--text);
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .state-online .status-chip {
+      border-color: rgba(48, 224, 138, 0.5);
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .state-recent .status-chip {
+      border-color: rgba(85, 217, 255, 0.5);
+      background: var(--cyan-soft);
+      color: var(--cyan);
+    }
+
+    .state-followup .status-chip {
+      border-color: rgba(244, 200, 74, 0.55);
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-top: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pager-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .empty-state,
+    .error-state {
+      padding: 34px 18px;
+      color: var(--muted);
+      text-align: center;
+      background: #101513;
+    }
+
+    .error-state {
+      color: #ffb5ae;
+    }
+
+    @media (max-width: 1240px) {
+      .kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .monitor-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #map {
+        height: 520px;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .app-shell {
+        padding: 14px;
+      }
+
+      .topbar {
+        flex-direction: column;
+      }
+
+      .top-actions,
+      .status-pill {
+        width: 100%;
+      }
+
+      .status-pill {
+        text-align: left;
+      }
+
+      .kpi-grid,
+      .region-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .station-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .segmented {
+        justify-content: flex-start;
+      }
+
+      .station-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .station-main {
+        grid-column: 1 / -1;
+      }
+
+      #map {
+        height: 440px;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .kpi-grid,
+      .region-card-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .station-row {
+        grid-template-columns: 1fr;
+      }
+
+      .status-chip {
+        width: fit-content;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">TinyGS Ground Stations · <span id="countryFocus">Thailand</span></div>
+        <h1 id="dashboardTitle">SatFinder TinyGS World Monitor</h1>
+        <p class="subtitle" id="projectSubtitle">คณะวิศวกรรมศาสตร์ มหาวิทยาลัยธรรมศาสตร์ · สถาบันวิจัยและให้คำปรึกษาแห่งมหาวิทยาลัยธรรมศาสตร์</p>
+      </div>
+      <div class="top-actions">
+        <button class="action-button" id="refreshBtn" type="button">Refresh</button>
+        <div class="status-pill" id="refreshStatus">Loading</div>
+      </div>
+    </header>
+
+    <section class="kpi-grid" aria-label="Project KPIs">
+      <article class="kpi">
+        <span>สถานีในระบบ</span>
+        <strong id="kpiTotal">0</strong>
+        <small id="kpiLatest">0 ในรอบล่าสุด</small>
+      </article>
+      <article class="kpi online">
+        <span>Online</span>
+        <strong id="kpiOnline">0</strong>
+        <small id="kpiOnlineRate">0%</small>
+      </article>
+      <article class="kpi follow">
+        <span>รอติดตาม</span>
+        <strong id="kpiFollow">0</strong>
+        <small>แยกจากคะแนนประเมินผล</small>
+      </article>
+      <article class="kpi packet">
+        <span>Confirmed packets</span>
+        <strong id="kpiConfirmed">0</strong>
+        <small>เรียงสถานีด้วยค่านี้</small>
+      </article>
+      <article class="kpi">
+        <span>Telemetry packets</span>
+        <strong id="kpiTelemetry">0</strong>
+        <small>ข้อมูล payload/telemetry</small>
+      </article>
+      <article class="kpi">
+        <span>พิกัดพร้อมแผนที่</span>
+        <strong id="kpiLocation">0</strong>
+        <small id="kpiNoLocation">0 ไม่มีพิกัด</small>
+      </article>
+    </section>
+
+    <section class="monitor-grid">
+      <section class="panel map-panel" aria-label="OpenStreetMap">
+        <div class="panel-head">
+          <h2>OpenStreetMap Station Monitor</h2>
+          <div class="panel-meta" id="mapMeta">0 markers</div>
+        </div>
+        <div id="map"></div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>ภาพรวมโครงการ</h2>
+          <div class="panel-meta" id="batchMeta">No import</div>
+        </div>
+        <div class="ops-body">
+          <div class="region-overview">
+            <div class="region-head">
+              <h3>พื้นที่จากพิกัด</h3>
+              <span id="regionMeta">0 สถานี</span>
+            </div>
+            <div id="regionBreakdown" class="region-card-grid"></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel station-panel" aria-label="Station list">
+      <div class="panel-head">
+        <h2>Station List</h2>
+        <div class="panel-meta" id="listMeta">0 stations</div>
+      </div>
+      <div class="station-toolbar">
+        <input id="searchInput" class="search" type="search" placeholder="ค้นหาสถานี, version, พื้นที่">
+        <div class="segmented" id="filterButtons">
+          <button type="button" class="active" data-filter="all">ทั้งหมด</button>
+          <button type="button" data-filter="online">Online</button>
+          <button type="button" data-filter="recent">เพิ่งเห็น</button>
+          <button type="button" data-filter="followup">รอติดตาม</button>
+          <button type="button" data-filter="no_location">ไม่มีพิกัด</button>
+        </div>
+        <select id="pageSize" class="page-size" aria-label="Page size">
+          <option value="25">25 / หน้า</option>
+          <option value="50">50 / หน้า</option>
+          <option value="100">100 / หน้า</option>
+        </select>
+      </div>
+      <div id="stationList" class="station-list"></div>
+      <div class="pager">
+        <div id="pagerText">0-0 จาก 0</div>
+        <div class="pager-controls">
+          <button type="button" id="prevPage">Prev</button>
+          <button type="button" id="nextPage">Next</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const stateMeta = {
+      online: { color: '#30e08a', rank: 0 },
+      recent: { color: '#55d9ff', rank: 1 },
+      followup: { color: '#f4c84a', rank: 2 },
+    };
+
+    let dashboardData = null;
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let currentPage = 1;
+    let selectedStationKey = '';
+    let map = null;
+    let markerLayer = null;
+    let markersByKey = {};
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindEvents();
+      loadDashboardData();
+    });
+
+    function bindEvents() {
+      document.getElementById('refreshBtn').addEventListener('click', loadDashboardData);
+      document.getElementById('searchInput').addEventListener('input', (event) => {
+        currentSearch = event.target.value.trim().toLowerCase();
+        currentPage = 1;
+        renderStations();
+        renderMap();
+      });
+      document.getElementById('filterButtons').addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-filter]');
+        if (!button) return;
+        currentFilter = button.dataset.filter;
+        currentPage = 1;
+        document.querySelectorAll('#filterButtons button').forEach((item) => item.classList.toggle('active', item === button));
+        renderStations();
+        renderMap();
+      });
+      document.getElementById('pageSize').addEventListener('change', () => {
+        currentPage = 1;
+        renderStations();
+      });
+      document.getElementById('prevPage').addEventListener('click', () => {
+        currentPage = Math.max(1, currentPage - 1);
+        renderStations();
+      });
+      document.getElementById('nextPage').addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(getFilteredStations().length / getPageSize()));
+        currentPage = Math.min(totalPages, currentPage + 1);
+        renderStations();
+      });
+      document.getElementById('stationList').addEventListener('click', (event) => {
+        const row = event.target.closest('.station-row');
+        if (!row) return;
+        selectedStationKey = row.dataset.key;
+        renderStations();
+        focusStationOnMap(selectedStationKey);
+      });
+    }
+
+    function loadDashboardData() {
+      setText('refreshStatus', 'Loading');
+      if (!window.google || !google.script || !google.script.run) {
+        setText('refreshStatus', 'Open from Apps Script');
+        document.getElementById('stationList').innerHTML = '<div class="error-state">Dashboard นี้ต้องเปิดจาก Google Apps Script หรือ Web App deployment</div>';
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler((data) => {
+          dashboardData = data;
+          currentPage = 1;
+          renderAll();
+          setText('refreshStatus', 'Updated ' + formatTime(data.generatedAt));
+        })
+        .withFailureHandler((error) => {
+          setText('refreshStatus', 'Load failed');
+          document.getElementById('stationList').innerHTML = '<div class="error-state">' + escapeHtml(error.message || error) + '</div>';
+        })
+        .getDashboardData();
+    }
+
+    function renderAll() {
+      if (!dashboardData) return;
+      renderHeader();
+      renderKpis();
+      renderBreakdowns();
+      renderMap();
+      renderStations();
+    }
+
+    function renderHeader() {
+      setText('countryFocus', dashboardData.project.countryFocus || 'Thailand');
+      setText('dashboardTitle', dashboardData.project.title || 'SatFinder TinyGS World Monitor');
+      setText('projectSubtitle', [dashboardData.project.operatorName, dashboardData.project.partnerName].filter(Boolean).join(' · '));
+      setText('batchMeta', dashboardData.config.lastImportAt ? 'Import ' + formatTime(dashboardData.config.lastImportAt) : 'No import');
+    }
+
+    function renderKpis() {
+      const summary = dashboardData.summary;
+      setText('kpiTotal', formatNumber(summary.totalStations));
+      setText('kpiLatest', formatNumber(summary.latestStations) + ' ในรอบล่าสุด');
+      setText('kpiOnline', formatNumber(summary.onlineStations));
+      setText('kpiOnlineRate', percent(summary.onlineStations, Math.max(summary.latestStations, 1)));
+      setText('kpiFollow', formatNumber(summary.followUpStations));
+      setText('kpiConfirmed', formatNumber(summary.confirmedPackets));
+      setText('kpiTelemetry', formatNumber(summary.telemetryPackets));
+      setText('kpiLocation', formatNumber(summary.withLocation));
+      setText('kpiNoLocation', formatNumber(summary.withoutLocation) + ' ไม่มีพิกัด');
+    }
+
+    function renderBreakdowns() {
+      renderRegionCards('regionBreakdown', dashboardData.regionBreakdown, dashboardData.summary);
+    }
+
+    function renderRegionCards(elementId, items, summary) {
+      const element = document.getElementById(elementId);
+      if (!items || items.length === 0) {
+        element.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>';
+        setText('regionMeta', '0 สถานี');
+        return;
+      }
+      const total = Math.max(Number(summary.totalStations || 0), 1);
+      const max = Math.max(...items.map((item) => item.count), 1);
+      setText('regionMeta', formatNumber(summary.withLocation) + ' มีพิกัด · ' + formatNumber(summary.totalStations) + ' ทั้งหมด');
+      element.innerHTML = items.map((item) => {
+        const width = Math.max(3, Math.round((item.count / max) * 100));
+        return `
+          <div class="region-card" title="${escapeHtml(item.name)}">
+            <span>${escapeHtml(item.name)}</span>
+            <strong>${formatNumber(item.count)}</strong>
+            <small>${percent(item.count, total)} ของสถานีทั้งหมด</small>
+            <div class="region-meter"><div class="region-meter-fill" style="width:${width}%"></div></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderMap() {
+      if (!dashboardData || !window.L) return;
+      if (!map) {
+        map = L.map('map', {
+          worldCopyJump: true,
+          zoomControl: true,
+        }).setView([13.7563, 100.5018], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        }).addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+      }
+
+      markerLayer.clearLayers();
+      markersByKey = {};
+      const markers = [];
+      const stations = getFilteredStations().filter((station) => station.hasLocation);
+
+      stations.forEach((station) => {
+        const meta = stateMeta[station.monitorState] || stateMeta.followup;
+        const marker = L.circleMarker([station.latitude, station.longitude], {
+          radius: markerRadius(station),
+          color: '#09100d',
+          weight: 1.5,
+          fillColor: meta.color,
+          fillOpacity: station.inLatestImport ? 0.86 : 0.56,
+        });
+        marker.bindPopup(renderPopup(station));
+        marker.on('click', () => {
+          selectedStationKey = station.stationKey;
+          renderStations();
+        });
+        marker.addTo(markerLayer);
+        markersByKey[station.stationKey] = marker;
+        markers.push(marker);
+      });
+
+      setText('mapMeta', formatNumber(markers.length) + ' markers');
+      if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.18), { maxZoom: 8 });
+      } else {
+        map.setView([13.7563, 100.5018], 5);
+      }
+      window.setTimeout(() => map.invalidateSize(), 120);
+    }
+
+    function markerRadius(station) {
+      return Math.max(5, Math.min(18, 5 + Math.log10(station.confirmedPackets + 1) * 1.9));
+    }
+
+    function renderPopup(station) {
+      return `
+        <div class="popup-title">${escapeHtml(station.name)}</div>
+        <div class="popup-grid">
+          <span>สถานะ</span><strong>${escapeHtml(station.monitorLabel)}</strong>
+          <span>Confirmed</span><strong>${formatNumber(station.confirmedPackets)}</strong>
+          <span>Telemetry</span><strong>${formatNumber(station.telemetryPackets)}</strong>
+          <span>ล่าสุด</span><strong>${escapeHtml(relativeSeen(station.minutesSinceSeen))}</strong>
+        </div>
+      `;
+    }
+
+    function focusStationOnMap(stationKey) {
+      const marker = markersByKey[stationKey];
+      if (!marker || !map) return;
+      const latLng = marker.getLatLng();
+      map.flyTo(latLng, Math.max(map.getZoom(), 9), { duration: 0.55 });
+      marker.openPopup();
+    }
+
+    function renderStations() {
+      if (!dashboardData) return;
+      const list = document.getElementById('stationList');
+      const stations = getFilteredStations();
+      const pageSize = getPageSize();
+      const totalPages = Math.max(1, Math.ceil(stations.length / pageSize));
+      currentPage = Math.min(currentPage, totalPages);
+      const start = (currentPage - 1) * pageSize;
+      const pageStations = stations.slice(start, start + pageSize);
+
+      setText('listMeta', formatNumber(stations.length) + ' stations');
+      setText('pagerText', stations.length === 0
+        ? '0-0 จาก 0'
+        : formatNumber(start + 1) + '-' + formatNumber(start + pageStations.length) + ' จาก ' + formatNumber(stations.length));
+      document.getElementById('prevPage').disabled = currentPage <= 1;
+      document.getElementById('nextPage').disabled = currentPage >= totalPages;
+
+      if (pageStations.length === 0) {
+        list.innerHTML = '<div class="empty-state">ไม่พบสถานีตามตัวกรองนี้</div>';
+        return;
+      }
+
+      list.innerHTML = pageStations.map((station) => `
+        <button type="button" class="station-row state-${station.monitorState}${station.stationKey === selectedStationKey ? ' selected' : ''}" data-key="${escapeHtml(station.stationKey)}">
+          <div class="station-main">
+            <div class="station-name"><span class="dot"></span><span>${escapeHtml(station.name)}</span></div>
+            <div class="station-sub">${escapeHtml(station.region)} · ${escapeHtml(formatLocation(station))}</div>
+          </div>
+          <div class="metric-cell">
+            <span>Confirmed</span>
+            <strong>${formatNumber(station.confirmedPackets)}</strong>
+          </div>
+          <div class="metric-cell">
+            <span>Telemetry</span>
+            <strong>${formatNumber(station.telemetryPackets)}</strong>
+          </div>
+          <div class="metric-cell">
+            <span>Status</span>
+            <strong><span class="status-chip">${escapeHtml(station.monitorLabel)}</span></strong>
+          </div>
+        </button>
+      `).join('');
+    }
+
+    function getFilteredStations() {
+      if (!dashboardData) return [];
+      return dashboardData.stations
+        .filter((station) => {
+          if (currentFilter === 'online' && !station.isOnline) return false;
+          if (currentFilter === 'recent' && station.monitorState !== 'recent') return false;
+          if (currentFilter === 'followup' && station.monitorState !== 'followup') return false;
+          if (currentFilter === 'no_location' && station.hasLocation) return false;
+          if (!currentSearch) return true;
+          const haystack = [
+            station.name,
+            station.version,
+            station.region,
+            station.userId,
+          ].join(' ').toLowerCase();
+          return haystack.indexOf(currentSearch) >= 0;
+        })
+        .slice()
+        .sort((a, b) => {
+          if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+          const rankA = (stateMeta[a.monitorState] || stateMeta.followup).rank;
+          const rankB = (stateMeta[b.monitorState] || stateMeta.followup).rank;
+          if (rankA !== rankB) return rankA - rankB;
+          if (b.confirmedPackets !== a.confirmedPackets) return b.confirmedPackets - a.confirmedPackets;
+          if (b.telemetryPackets !== a.telemetryPackets) return b.telemetryPackets - a.telemetryPackets;
+          return a.name.localeCompare(b.name);
+        });
+    }
+
+    function getPageSize() {
+      return Number(document.getElementById('pageSize').value || 25);
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat('th-TH').format(Number(value || 0));
+    }
+
+    function percent(value, total) {
+      if (!total) return '0%';
+      return new Intl.NumberFormat('th-TH', { maximumFractionDigits: 1 }).format((value / total) * 100) + '%';
+    }
+
+    function formatTime(iso) {
+      if (!iso) return 'ไม่ระบุ';
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return 'ไม่ระบุ';
+      return new Intl.DateTimeFormat('th-TH', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Bangkok',
+      }).format(date);
+    }
+
+    function relativeSeen(minutes) {
+      if (minutes === null || minutes === undefined || minutes === '') return 'ไม่ระบุ';
+      const value = Number(minutes);
+      if (!Number.isFinite(value)) return 'ไม่ระบุ';
+      if (value < 1) return 'เมื่อสักครู่';
+      if (value < 60) return Math.round(value) + ' นาที';
+      if (value < 1440) return Math.round(value / 60) + ' ชม.';
+      return Math.round(value / 1440) + ' วัน';
+    }
+
+    function formatLocation(station) {
+      if (!station.hasLocation) return 'ไม่มีพิกัด';
+      return Number(station.latitude).toFixed(3) + ', ' + Number(station.longitude).toFixed(3);
+    }
+
+    function setText(id, value) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value === undefined || value === null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

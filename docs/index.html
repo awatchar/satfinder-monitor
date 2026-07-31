@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07110f">
+  <meta name="description" content="SatFinder ground-station operations monitor">
+  <title>SatFinder Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ3ynJb+Fj/VOjsAK10iZ7V9uHEVZc0="
+    crossorigin=""
+  >
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#monitor-main">ข้ามไปยังเนื้อหาหลัก</a>
+
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="#monitor-main" aria-label="SatFinder Monitor home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span class="brand-copy">
+          <strong>SatFinder</strong>
+          <small>Ground Station Network</small>
+        </span>
+      </a>
+
+      <div class="network-state" aria-live="polite">
+        <span class="network-pulse" aria-hidden="true"></span>
+        <span id="networkState">กำลังเชื่อมต่อข้อมูล</span>
+        <time id="lastUpdated"></time>
+      </div>
+    </header>
+
+    <main id="monitor-main">
+      <section class="hero" aria-labelledby="pageTitle">
+        <div>
+          <p class="eyebrow">THAILAND · TINYGS NETWORK</p>
+          <h1 id="pageTitle">SatFinder Monitor</h1>
+          <p class="hero-copy" id="projectSubtitle">
+            ภาพรวมสถานีภาคพื้นดินและสถานะการรับสัญญาณแบบเรียลไทม์
+          </p>
+        </div>
+        <button class="refresh-button" id="refreshButton" type="button">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M20 11a8.1 8.1 0 0 0-14.9-4M4 5v5h5M4 13a8.1 8.1 0 0 0 14.9 4M20 19v-5h-5"/>
+          </svg>
+          <span>อัปเดตข้อมูล</span>
+        </button>
+      </section>
+
+      <section class="metrics" aria-label="Network summary">
+        <article class="metric-card metric-primary">
+          <span>สถานีทั้งหมด</span>
+          <strong id="metricTotal">—</strong>
+          <small id="metricLatest">รอข้อมูลล่าสุด</small>
+        </article>
+        <article class="metric-card metric-online">
+          <span>ออนไลน์</span>
+          <strong id="metricOnline">—</strong>
+          <small id="metricOnlineRate">—</small>
+        </article>
+        <article class="metric-card metric-followup">
+          <span>รอติดตาม</span>
+          <strong id="metricFollowup">—</strong>
+          <small>สถานีที่ควรตรวจสอบ</small>
+        </article>
+        <article class="metric-card metric-packets">
+          <span>Confirmed packets</span>
+          <strong id="metricPackets">—</strong>
+          <small id="metricTelemetry">— telemetry</small>
+        </article>
+      </section>
+
+      <section class="control-deck" aria-label="Station filters">
+        <label class="search-box" for="stationSearch">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m20 20-3.4-3.4"></path>
+          </svg>
+          <input id="stationSearch" type="search" placeholder="ค้นหาสถานี ดาวเทียม พื้นที่ หรือเวอร์ชัน">
+        </label>
+
+        <div class="status-filters" id="statusFilters" aria-label="กรองตามสถานะ">
+          <button type="button" data-filter="all" aria-pressed="true">ทั้งหมด</button>
+          <button type="button" data-filter="online" aria-pressed="false"><span class="filter-dot dot-online"></span>ออนไลน์</button>
+          <button type="button" data-filter="recent" aria-pressed="false"><span class="filter-dot dot-recent"></span>เพิ่งพบ</button>
+          <button type="button" data-filter="followup" aria-pressed="false"><span class="filter-dot dot-followup"></span>รอติดตาม</button>
+        </div>
+      </section>
+
+      <section class="monitor-layout" aria-label="Station monitoring workspace">
+        <article class="map-panel">
+          <header class="panel-header">
+            <div>
+              <p class="panel-kicker">NETWORK MAP</p>
+              <h2>ตำแหน่งสถานีภาคพื้นดิน</h2>
+            </div>
+            <div class="map-legend" aria-label="Map legend">
+              <span><i class="dot-online"></i>ออนไลน์</span>
+              <span><i class="dot-recent"></i>เพิ่งพบ</span>
+              <span><i class="dot-followup"></i>รอติดตาม</span>
+            </div>
+          </header>
+          <div class="map-stage">
+            <div id="map" role="application" aria-label="แผนที่สถานี SatFinder"></div>
+            <aside class="selection-card" id="selectionCard" hidden aria-live="polite">
+              <button id="closeSelection" type="button" aria-label="ปิดรายละเอียดสถานี">×</button>
+              <p id="selectedStatus">—</p>
+              <h3 id="selectedName">—</h3>
+              <span id="selectedRegion">—</span>
+              <dl>
+                <div><dt>Confirmed</dt><dd id="selectedConfirmed">—</dd></div>
+                <div><dt>Telemetry</dt><dd id="selectedTelemetry">—</dd></div>
+                <div><dt>พบล่าสุด</dt><dd id="selectedSeen">—</dd></div>
+              </dl>
+            </aside>
+          </div>
+        </article>
+
+        <aside class="station-panel" aria-labelledby="stationListTitle">
+          <header class="panel-header station-header">
+            <div>
+              <p class="panel-kicker">STATION DIRECTORY</p>
+              <h2 id="stationListTitle">รายชื่อสถานี</h2>
+            </div>
+            <span class="result-count" id="resultCount">0 สถานี</span>
+          </header>
+          <div class="station-list" id="stationList" aria-live="polite">
+            <div class="loading-state">
+              <span></span><span></span><span></span>
+              <p>กำลังโหลดเครือข่าย</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="error-banner" id="errorBanner" hidden role="alert">
+        <strong>ยังโหลดข้อมูลไม่ได้</strong>
+        <span id="errorMessage">โปรดลองใหม่อีกครั้ง</span>
+      </section>
+    </main>
+
+    <footer>
+      <span>SatFinder Monitor</span>
+      <span>ข้อมูลจาก Google Sheets ผ่าน read-only Apps Script endpoint</span>
+    </footer>
+  </div>
+
+  <script src="config.js"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
