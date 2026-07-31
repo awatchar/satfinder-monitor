@@ -8,6 +8,7 @@
   <title>SatFinder Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="data/stations.json" as="fetch" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
@@ -145,7 +146,7 @@
 
     <footer>
       <span>SatFinder Monitor</span>
-      <span>ข้อมูลจาก Google Sheets ผ่าน read-only Apps Script endpoint</span>
+      <span>ข้อมูลจาก Google Sheets · อัปเดตอัตโนมัติทุก 6 ชั่วโมง</span>
     </footer>
   </div>
 
@@ -154,6 +155,7 @@
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
+    onerror="this.onerror=null;this.removeAttribute('integrity');this.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'"
   ></script>
   <script src="assets/app.js"></script>
 </body>

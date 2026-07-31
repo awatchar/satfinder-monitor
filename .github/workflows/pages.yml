@@ -2,10 +2,15 @@ name: Deploy GitHub Pages
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '27 */6 * * *'
+      timezone: 'Asia/Bangkok'
   push:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'scripts/refresh-public-snapshot.mjs'
+      - 'package.json'
       - '.github/workflows/pages.yml'
 
 permissions:
@@ -24,12 +29,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      SATFINDER_PUBLIC_API_URL: ${{ vars.SATFINDER_PUBLIC_API_URL }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+
+      - name: Refresh public Google Sheets snapshot
+        run: node scripts/refresh-public-snapshot.mjs
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4

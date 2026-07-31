@@ -11,6 +11,7 @@
     "sheet:write": "node scripts/google-sheets.mjs write",
     "sheet:clear": "node scripts/google-sheets.mjs clear",
     "tinygs:sync": "node scripts/tinygs-sync.mjs",
+    "snapshot:refresh": "node scripts/refresh-public-snapshot.mjs",
     "script:pull": "node scripts/apps-script-api.mjs pull",
     "script:push": "node scripts/apps-script-api.mjs push",
     "script:deployments": "node scripts/apps-script-deployments.mjs list",
